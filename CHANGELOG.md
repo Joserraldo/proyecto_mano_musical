@@ -1,0 +1,33 @@
+# Changelog
+
+Todos los cambios notables de este proyecto se documentan acá. El formato sigue
+[Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado
+[SemVer](https://semver.org/lang/es/).
+
+## [1.0.0] - 2026-10-02
+
+### Added
+- Detección de manos en tiempo real con MediaPipe Tasks (`HandLandmarker`, modo VIDEO).
+- Escala de 10 notas C4–E5 mapeada a los 10 dedos (`config.NOTE_MAP`).
+- Detección de "dedo bajado" por ángulo PIP con histéresis, suavizado y debounce;
+  modos `curl` y `drop`.
+- Motor de audio polifónico propio sobre `pygame.mixer` con un canal por voz.
+- Síntesis aditiva con armónicos, vibrato y envolvente ADSR; timbres
+  `piano`, `organ`, `chiptune`, `synth`.
+- Arquitectura multi-hilo: captura, inferencia y render desacoplados vía `SharedState`.
+- Modo libre (air-piano), modo juego de Jingle Bells (notas que caen + puntaje),
+  modo demo (autoplay) y modo replay.
+- Grabación y reproducción de performances en JSON (`recordings/`).
+- Render con cámara, esqueleto, teclado de 10 teclas, partículas y HUD.
+- Modo sin cámara / accesibilidad con teclado (`A S D F G H J K L ;`).
+- Partitura embebida y en `assets/songs/jingle_bells.json`.
+- Descarga automática del modelo MediaPipe (`scripts/download_models.py`).
+- Documentación: README, ARQUITECTURA, COMO_TOCAR, NOTAS_Y_MAPEO, CREATIVIDAD, BITACORA.
+- Suite de 32 tests (música, gestos, juego, grabación).
+
+### Notes
+- Requiere Python 3.10–3.12.
+- En equipos con `pip.exe` bloqueado por Application Control, usar `python -m pip`.
+- El bundle `hand_landmarker.task` no se versiona; se descarga al primer uso.
+
+[1.0.0]: https://github.com/TU_USUARIO/mano-musical/releases/tag/v1.0.0

@@ -1,0 +1,22 @@
+{
+  "name": "Jingle Bells",
+  "bpm": 120,
+  "events": [
+    { "note": "E4", "beats": 1 }, { "note": "E4", "beats": 1 }, { "note": "E4", "beats": 2 },
+    { "note": "E4", "beats": 1 }, { "note": "E4", "beats": 1 }, { "note": "E4", "beats": 2 },
+    { "note": "E4", "beats": 1 }, { "note": "G4", "beats": 1 }, { "note": "C5", "beats": 1 }, { "note": "D5", "beats": 1 },
+    { "note": "E5", "beats": 4 },
+    { "note": "F4", "beats": 1 }, { "note": "F4", "beats": 1 }, { "note": "F4", "beats": 1 }, { "note": "F4", "beats": 1 },
+    { "note": "F4", "beats": 1 }, { "note": "E4", "beats": 1 }, { "note": "E4", "beats": 2 },
+    { "note": "E4", "beats": 1 }, { "note": "E4", "beats": 1 }, { "note": "D4", "beats": 1 }, { "note": "D4", "beats": 1 },
+    { "note": "E4", "beats": 1 }, { "note": "D4", "beats": 1 }, { "note": "G4", "beats": 2 },
+    { "note": "E4", "beats": 1 }, { "note": "E4", "beats": 1 }, { "note": "E4", "beats": 2 },
+    { "note": "E4", "beats": 1 }, { "note": "E4", "beats": 1 }, { "note": "E4", "beats": 2 },
+    { "note": "E4", "beats": 1 }, { "note": "G4", "beats": 1 }, { "note": "C5", "beats": 1 }, { "note": "D5", "beats": 1 },
+    { "note": "E5", "beats": 4 },
+    { "note": "F4", "beats": 1 }, { "note": "F4", "beats": 1 }, { "note": "F4", "beats": 1 }, { "note": "F4", "beats": 1 },
+    { "note": "F4", "beats": 1 }, { "note": "E4", "beats": 1 }, { "note": "E4", "beats": 2 },
+    { "note": "E4", "beats": 1 }, { "note": "E4", "beats": 1 }, { "note": "D4", "beats": 1 }, { "note": "D4", "beats": 1 },
+    { "note": "E4", "beats": 1 }, { "note": "D4", "beats": 1 }, { "note": "C4", "beats": 4 }
+  ]
+}

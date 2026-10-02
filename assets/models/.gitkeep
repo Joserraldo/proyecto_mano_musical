@@ -1,0 +1,2 @@
+# Mantiene el directorio assets/models/ en el repo.
+# El bundle hand_landmarker.task (~8 MB) se descarga con scripts/download_models.py

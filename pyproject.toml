@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mano-musical"
+version = "1.0.0"
+description = "Air-piano con visión por computador: toca Jingle Bells bajando los dedos frente a la cámara."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Mano Musical contributors" }]
+keywords = ["mediapipe", "opencv", "pygame", "hand-tracking", "air-piano", "jingle-bells"]
+dependencies = [
+    "numpy>=1.26",
+    "opencv-python>=4.8",
+    "mediapipe>=0.10.14",
+    "pygame>=2.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "ruff>=0.4"]
+audio = ["sounddevice>=0.4.6"]
+
+[project.scripts]
+mano-musical = "mano_musical.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
