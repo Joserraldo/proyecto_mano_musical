@@ -39,6 +39,7 @@ class AudioEngine:
         self.polyphony = polyphony
         self.master_volume = float(np.clip(master_volume, 0.0, 1.0))
         self.timbre = timbre
+        self.channels = config.AUDIO_CHANNELS
         self.available = False
         self._sounds: dict[tuple[str, str], "pygame.mixer.Sound"] = {}
         self._voices: dict[str, "pygame.mixer.Channel"] = {}
@@ -61,13 +62,26 @@ class AudioEngine:
                 )
                 pygame.mixer.init()
             pygame.mixer.set_num_channels(max(self.polyphony, 16))
-            log.info("Mixer iniciado: %s", pygame.mixer.get_init())
+            info = pygame.mixer.get_init()
+            if info:
+                self.channels = int(info[2])
+            log.info("Mixer iniciado: %s (canales=%d)", info, self.channels)
             return True
         except Exception as exc:  # pragma: no cover
             log.warning("No se pudo iniciar el mixer (%s): audio deshabilitado", exc)
             return False
 
     # --------------------------------------------------------------- samples
+    def _to_mixer(self, array: np.ndarray) -> np.ndarray:
+        """Adapta una muestra al número real de canales del dispositivo."""
+        if array.ndim == 1:
+            array = array[:, None]
+        if array.shape[1] == self.channels:
+            return np.ascontiguousarray(array)
+        mono = array[:, 0]
+        tiled = np.repeat(mono[:, None], self.channels, axis=1)
+        return np.ascontiguousarray(tiled)
+
     def _sound_for(self, note: str, timbre: str | None = None) -> Optional["pygame.mixer.Sound"]:
         if not self.available:
             return None
@@ -77,7 +91,7 @@ class AudioEngine:
             array = music.synthesize_note_timbre(
                 note, timbre=timbre, duration=config.NOTE_DURATION, sample_rate=self.sample_rate
             )
-            self._sounds[key] = pygame.sndarray.make_sound(array)
+            self._sounds[key] = pygame.sndarray.make_sound(self._to_mixer(array))
         return self._sounds[key]
 
     def set_timbre(self, timbre: str) -> None:
@@ -125,7 +139,7 @@ class AudioEngine:
         """Reproduce una pista de acompañamiento en un canal dedicado."""
         if not self.available:
             return
-        sound = pygame.sndarray.make_sound(samples)
+        sound = pygame.sndarray.make_sound(self._to_mixer(samples))
         if self._backing is None or not self._backing.get_busy():
             self._backing = pygame.mixer.find_channel(True)
         if self._backing is None:

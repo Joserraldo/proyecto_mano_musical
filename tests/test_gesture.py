@@ -106,6 +106,40 @@ def test_debounce_blocks_rapid_toggle():
     assert second == []
 
 
+def test_debounce_blocked_change_does_not_crash():
+    detector = FingerPressDetector(mode="curl", smoothing=0.0, debounce=10.0)
+    lm = _base_landmarks()
+    detector.update(HandFrame([_hand(lm)]), now=0.0)
+    on = detector.update(HandFrame([_hand(_bend(lm, "index"))]), now=0.1)
+    assert any(t.kind == "on" for t in on)
+    for i in range(1, 8):
+        result = detector.update(HandFrame([_hand(lm)]), now=0.1 + 0.05 * i)
+        assert result == []
+
+
+def test_calibration_sets_per_finger_thresholds():
+    detector = FingerPressDetector(mode="curl", smoothing=0.0)
+    detector.begin_calibration(now=0.0, seconds=0.1)
+    lm = _base_landmarks()
+    detector.update(HandFrame([_hand(lm)]), now=0.05)
+    detector.update(HandFrame([_hand(lm)]), now=0.2)
+    assert detector.calibrating is False
+    state = detector._states[("Right", "index")]
+    assert state.calibrated is True
+    assert state.ext_ref > 150.0
+    enter, release = detector._thresholds(state)
+    assert enter < release
+
+
+def test_sensitivity_nudge_clamps():
+    detector = FingerPressDetector()
+    detector.nudge_sensitivity(-1000)
+    assert detector.press_enter == config.SENSITIVITY_MIN
+    detector.nudge_sensitivity(1000)
+    assert detector.press_enter == config.SENSITIVITY_MAX
+    assert detector.press_release > detector.press_enter
+
+
 def test_swipe_detector_direction():
     swipe = SwipeDetector(window=1.0, distance=0.2)
     swipe.update(0.2, now=0.0)

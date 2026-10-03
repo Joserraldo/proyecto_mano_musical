@@ -4,6 +4,25 @@ Todos los cambios notables de este proyecto se documentan acá. El formato sigue
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado
 [SemVer](https://semver.org/lang/es/).
 
+## [Unreleased]
+
+### Added
+- Controles en vivo: `X` invertir manos, `V` espejo, `B` rotar 180°, `,`/`.`
+  sensibilidad, `C` calibración guiada.
+- Calibración por dedo: mide el ángulo extendido real y deriva los umbrales
+  (`ext_ref`); adapta el instrumento a cada mano.
+- HUD de orientación y progreso de calibración.
+- Flags `--rotate180` y `--no-swap-hands`.
+
+### Fixed
+- Crash al dibujar el esqueleto con numpy.float32 (`invalid start_pos argument`).
+- Crash de audio cuando el dispositivo abre en 8 canales (muestra adaptada al
+  número real de canales del mixer).
+- `UnboundLocalError: velocity` en el detector al cambiar de dedo dentro del
+  *debounce*.
+- Doble inversión de manos (tracker + detector) que se cancelaba; ahora el swap
+  se aplica solo en `HandTracker` y por defecto está activado.
+
 ## [1.0.0] - 2026-10-02
 
 ### Added

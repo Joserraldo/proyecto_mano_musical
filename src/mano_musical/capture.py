@@ -38,6 +38,7 @@ class CameraThread(threading.Thread):
         width: int = config.CAMERA_WIDTH,
         height: int = config.CAMERA_HEIGHT,
         mirror: bool = config.MIRROR,
+        rotate180: bool = False,
         fps: int = 30,
     ) -> None:
         super().__init__(name="CameraThread", daemon=True)
@@ -46,6 +47,7 @@ class CameraThread(threading.Thread):
         self.width = width
         self.height = height
         self.mirror = mirror
+        self.rotate180 = rotate180
         self.interval = 1.0 / max(1, fps)
         self._cap = None
 
@@ -82,6 +84,8 @@ class CameraThread(threading.Thread):
                 continue
             if self.mirror:
                 frame = cv2.flip(frame, 1)
+            if self.rotate180:
+                frame = cv2.flip(frame, -1)
             self.state.set_frame(np.ascontiguousarray(frame), now)
             time.sleep(self.interval)
         if self._cap is not None:

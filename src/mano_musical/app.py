@@ -71,10 +71,11 @@ class ManoMusicalApp:
         self.state.running.set()
         self.tracker = HandTracker(swap_handedness=args.swap_hands)
         self.state.tracker_available = self.tracker.available
-        self.detector = FingerPressDetector(mode=args.detection, swap_hands=args.swap_hands)
+        self.detector = FingerPressDetector(mode=args.detection, swap_hands=False)
+        self.rotate180 = bool(args.rotate180)
 
         self.camera = None if args.no_camera else CameraThread(
-            self.state, index=args.camera, mirror=not args.no_mirror
+            self.state, index=args.camera, mirror=not args.no_mirror, rotate180=self.rotate180
         )
         self.inference = (
             InferenceThread(self.state, self.tracker, self.detector) if self.tracker.available else None
@@ -174,13 +175,36 @@ class ManoMusicalApp:
             self.octave = 0 if self.octave >= 1 else self.octave + 1
             self._show_banner(f"Octava {'+' if self.octave else '0'}")
         elif key == pygame.K_c:
+            self.detector.begin_calibration(now)
+            self._show_banner(f"Calibrando {config.CALIBRATION_SECONDS:.0f}s: abre bien la mano", 4.0)
+        elif key == pygame.K_x:
+            self.tracker.swap_handedness = not self.tracker.swap_handedness
             self.detector.reset()
-            self._show_banner("Calibración reiniciada")
+            self._show_banner(f"Manos {'invertidas' if self.tracker.swap_handedness else 'normales'}")
+        elif key == pygame.K_v:
+            if self.camera:
+                self.camera.mirror = not self.camera.mirror
+                self.detector.reset()
+            self._show_banner(f"Espejo {'ON' if (self.camera and self.camera.mirror) else 'OFF'}")
+        elif key == pygame.K_b:
+            self.rotate180 = not self.rotate180
+            if self.camera:
+                self.camera.rotate180 = self.rotate180
+                self.detector.reset()
+            self._show_banner(f"Rotación 180° {'ON' if self.rotate180 else 'OFF'}")
+        elif key == pygame.K_COMMA:
+            self.detector.nudge_sensitivity(-config.SENSITIVITY_STEP)
+            self._show_banner(f"Sensibilidad {self.detector.press_enter:.0f}° (más fácil bajar)")
+        elif key == pygame.K_PERIOD:
+            self.detector.nudge_sensitivity(config.SENSITIVITY_STEP)
+            self._show_banner(f"Sensibilidad {self.detector.press_enter:.0f}° (más difícil)")
         elif key == pygame.K_LEFTBRACKET:
             self.detector.mode = "curl" if self.detector.mode != "curl" else "drop"
+            self.detector.reset()
             self._show_banner(f"Detección: {self.detector.mode}")
         elif key == pygame.K_RIGHTBRACKET:
             self.detector.mode = "drop" if self.detector.mode != "drop" else "curl"
+            self.detector.reset()
             self._show_banner(f"Detección: {self.detector.mode}")
         elif key == pygame.K_SPACE and self.ui.mode == "game":
             self._apply_mode("game", time.perf_counter())
@@ -350,6 +374,13 @@ class ManoMusicalApp:
             banner_timer=self.ui.banner_timer,
             countdown=self.game.countdown(now) if self.ui.mode == "game" and self.game.start_time else 0.0,
             game=self.ui.game,
+            detection=self.detector.mode,
+            mirror=bool(self.camera and self.camera.mirror),
+            rotate=self.rotate180,
+            swapped=self.tracker.swap_handedness,
+            calibrating=self.detector.calibrating,
+            calibration=self.detector.calibration_remaining(now),
+            sensitivity=self.detector.press_enter,
         )
         self.renderer.draw_hud(hud)
         if self.ui.show_help:
@@ -375,7 +406,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--detection", choices=["curl", "drop"], default="curl")
     parser.add_argument("--no-camera", action="store_true", help="modo teclado sin cámara")
     parser.add_argument("--no-mirror", action="store_true", help="no espejar la imagen")
-    parser.add_argument("--swap-hands", action="store_true", help="invertir izquierda/derecha")
+    parser.add_argument("--rotate180", action="store_true", help="rotar la imagen 180°")
+    parser.add_argument("--swap-hands", dest="swap_hands", action="store_true", help="invertir izquierda/derecha")
+    parser.add_argument("--no-swap-hands", dest="swap_hands", action="store_false", help="no invertir izquierda/derecha")
+    parser.set_defaults(swap_hands=config.DEFAULT_SWAP_HANDS)
     parser.add_argument("--mute", action="store_true", help="arrancar en silencio")
     parser.add_argument("--debug", action="store_true")
     return parser

@@ -118,13 +118,20 @@ class HudData:
     banner: str = ""
     banner_timer: float = 0.0
     game: Optional[dict] = None
+    detection: str = "curl"
+    mirror: bool = True
+    rotate: bool = False
+    swapped: bool = False
+    calibrating: bool = False
+    calibration: float = 0.0
+    sensitivity: float = config.PRESS_ANGLE_ENTER
 
 
 class Renderer:
     """Dibuja un frame completo de Mano Musical."""
 
     KEY_BAND_HEIGHT = 190
-    HUD_HEIGHT = 74
+    HUD_HEIGHT = 118
 
     def __init__(self, width: int = config.WINDOW_WIDTH, height: int = config.WINDOW_HEIGHT) -> None:
         if pygame is None:  # pragma: no cover
@@ -170,7 +177,7 @@ class Renderer:
 
     def to_screen(self, nx: float, ny: float) -> tuple[float, float]:
         r = self.view_rect
-        return r.x + nx * r.width, r.y + ny * r.height
+        return float(r.x) + float(nx) * float(r.width), float(r.y) + float(ny) * float(r.height)
 
     def key_rect(self, note: str) -> pygame.Rect:
         idx = config.VISUAL_KEYS.index(note)
@@ -320,6 +327,12 @@ class Renderer:
         self._blit_text(mode_label, self.font_md, config.COLOR_TEXT, 230, 12)
         info = f"{hud.fps:4.0f} FPS · infer {hud.infer_ms:4.1f} ms · manos {hud.hands} · timbre {hud.timbre} · oct {hud.octave:+d}"
         self._blit_text(info, self.font_sm, config.COLOR_TEXT_DIM, 16, 44)
+        orient = (
+            f"det {hud.detection} · sens {hud.sensitivity:.0f}° · "
+            f"espejo {'ON' if hud.mirror else 'OFF'} · rot {'ON' if hud.rotate else 'OFF'} · "
+            f"manos {'INV' if hud.swapped else 'NOR'}"
+        )
+        self._blit_text(orient, self.font_sm, config.COLOR_WARN, 16, 88)
         if hud.recording:
             pygame.draw.circle(self.screen, config.COLOR_ACCENT_2, (self.width - 200, 30), 10)
             self._blit_text("REC", self.font_md, config.COLOR_ACCENT_2, self.width - 186, 18)
@@ -334,6 +347,23 @@ class Renderer:
             self._blit_text(str(int(math.ceil(hud.countdown))), self.font_xl, config.COLOR_ACCENT, self.width // 2, self.height // 2, center=True)
         if hud.banner and hud.banner_timer > 0:
             self._blit_text(hud.banner, self.font_lg, config.COLOR_WARN, self.width // 2, self.HUD_HEIGHT + 60, center=True)
+        if hud.calibrating:
+            self._blit_text(
+                f"CALIBRANDO {hud.calibration:0.1f}s",
+                self.font_lg,
+                config.COLOR_ACCENT_2,
+                self.width // 2,
+                self.HUD_HEIGHT + 110,
+                center=True,
+            )
+            self._blit_text(
+                "Abre bien la mano, dedos estirados hacia arriba",
+                self.font_md,
+                config.COLOR_TEXT,
+                self.width // 2,
+                self.HUD_HEIGHT + 150,
+                center=True,
+            )
 
     def _draw_game_hud(self, game: dict) -> None:
         x = self.width // 2 - 120
@@ -356,8 +386,9 @@ class Renderer:
             ("Der: pulgar A4 · índice B4 · medio C5 · anular D5 · meñique E5", config.COLOR_TEXT_DIM, self.font_sm),
             ("", config.COLOR_TEXT, self.font_sm),
             ("F1 modo libre   F2 juego Jingle Bells   F3 demo   F4 replay", config.COLOR_TEXT, self.font_sm),
-            ("R grabar/reproducir   T timbre   M mutear   O octava   C calibrar", config.COLOR_TEXT, self.font_sm),
-            ("[ / ] cambiar modo de detección (curl/drop)   H ayuda   ESC salir", config.COLOR_TEXT, self.font_sm),
+            ("C calibrar (abre la mano 4s)   X invertir manos   V espejo   B rotar 180°", config.COLOR_WARN, self.font_sm),
+            ("R grabar/reproducir   T timbre   M mutear   O octava   , . sensibilidad", config.COLOR_TEXT, self.font_sm),
+            ("[ / ] cambiar modo de detección (curl/drop)   F10/ayuda   ESC salir", config.COLOR_TEXT, self.font_sm),
             ("", config.COLOR_TEXT, self.font_sm),
             ("Jingle Bells se toca así:  E E E · E E E · E G C D E · ...", config.COLOR_WARN, self.font_md),
         ]

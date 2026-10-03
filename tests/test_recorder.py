@@ -57,6 +57,19 @@ def test_player_plays_events_in_order():
     assert [e.note for e in second] == ["D4"]
 
 
+def test_audio_engine_adapts_channel_count():
+    import numpy as np
+
+    engine = AudioEngine(enabled=False)
+    stereo = np.column_stack((np.arange(10, dtype=np.int16), np.arange(10, dtype=np.int16)))
+    engine.channels = 2
+    assert engine._to_mixer(stereo).shape == (10, 2)
+    engine.channels = 8
+    assert engine._to_mixer(stereo).shape == (10, 8)
+    engine.channels = 1
+    assert engine._to_mixer(stereo).shape == (10, 1)
+
+
 def test_audio_engine_disabled_is_safe():
     engine = AudioEngine(enabled=False)
     assert engine.available is False

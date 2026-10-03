@@ -37,6 +37,9 @@ CAMERA_INDEX = 0
 CAMERA_WIDTH = 1280
 CAMERA_HEIGHT = 720
 MIRROR = True  # efecto espejo: muevo mi mano derecha y se mueve a la derecha en pantalla
+# MediaPipe 1.x etiqueta la lateralidad al revés para nuestra configuración de
+# espejo; invertir por defecto hace que la mano derecha toque las notas agudas.
+DEFAULT_SWAP_HANDS = True
 
 # --------------------------------------------------------------------------
 # Audio
@@ -118,6 +121,16 @@ PRESS_ANGLE_RELEASE = 145.0  # por encima de esto: se considera suelto (histére
 PRESS_VELOCITY_MIN = 0.0
 PRESS_VELOCITY_MAX = 900.0  # grados/segundo
 LANDMARK_SMOOTHING = 0.55  # 0 = sin suavizado, 0.9 = muy suave
+
+# Calibración: al abrir la mano se mide el ángulo "extendido" real de cada dedo
+# y los umbrales se derivan de ahí (enter = extendido - margen).
+CALIBRATION_SECONDS = 4.0
+CALIB_MARGIN_ENTER = 55.0
+CALIB_MARGIN_RELEASE = 25.0
+CALIB_MIN_EXTENDED = 120.0  # si un dedo nunca pasó de acá, se usa el umbral global
+SENSITIVITY_STEP = 7.0
+SENSITIVITY_MIN = 70.0
+SENSITIVITY_MAX = 168.0
 
 # --------------------------------------------------------------------------
 # Puntaje / modo juego

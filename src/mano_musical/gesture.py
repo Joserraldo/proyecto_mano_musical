@@ -76,6 +76,8 @@ class FingerState:
     last_change: float = -1e9
     last_angle: float = 0.0
     last_time: float = 0.0
+    ext_ref: float = 0.0
+    calibrated: bool = False
 
 
 class FingerPressDetector:
@@ -101,6 +103,38 @@ class FingerPressDetector:
         self._states: dict[tuple[str, str], FingerState] = {}
         self._last_angles: dict[tuple[str, str], float] = {}
         self.last_readings: dict[str, dict] = {}
+        self.calibrating = False
+        self.calib_until = 0.0
+
+    # ------------------------------------------------------------ calibración
+    def begin_calibration(self, now: float, seconds: float = config.CALIBRATION_SECONDS) -> None:
+        """Inicia una ventana en la que se mide el ángulo extendido real."""
+        for state in self._states.values():
+            state.ext_ref = 0.0
+            state.calibrated = False
+        self.calibrating = True
+        self.calib_until = now + seconds
+
+    def calibration_remaining(self, now: float) -> float:
+        return max(0.0, self.calib_until - now) if self.calibrating else 0.0
+
+    def _finish_calibration(self) -> None:
+        self.calibrating = False
+        for state in self._states.values():
+            if state.ext_ref >= config.CALIB_MIN_EXTENDED:
+                state.calibrated = True
+
+    def _thresholds(self, state: FingerState) -> tuple[float, float]:
+        if self.mode == "curl" and state.calibrated:
+            enter = max(60.0, state.ext_ref - config.CALIB_MARGIN_ENTER)
+            release = max(enter + 10.0, state.ext_ref - config.CALIB_MARGIN_RELEASE)
+            return enter, release
+        return self.press_enter, self.press_release
+
+    def nudge_sensitivity(self, delta: float) -> None:
+        """Ajusta cuán fácil es disparar una nota (sube = más sensible)."""
+        self.press_enter = clamp(self.press_enter + delta, config.SENSITIVITY_MIN, config.SENSITIVITY_MAX)
+        self.press_release = clamp(self.press_release + delta, self.press_enter + 5.0, 179.0)
 
     # ------------------------------------------------------------------ utils
     def _note_for(self, hand: str, finger: str) -> Optional[str]:
@@ -126,12 +160,16 @@ class FingerPressDetector:
         self._states.clear()
         self._last_angles.clear()
         self.last_readings.clear()
+        self.calibrating = False
+        self.calib_until = 0.0
         if hasattr(self, "_lm_ema"):
             self._lm_ema.clear()
 
     # ------------------------------------------------------------------ update
     def update(self, frame: HandFrame, now: float) -> list[NoteTrigger]:
         """Procesa un ``HandFrame`` y devuelve los eventos de nota detectados."""
+        if self.calibrating and now >= self.calib_until:
+            self._finish_calibration()
         triggers: list[NoteTrigger] = []
         active: dict[str, dict] = {}
         for hand in frame.hands:
@@ -149,15 +187,19 @@ class FingerPressDetector:
                 else:
                     state.angle_ema = 0.6 * state.angle_ema + 0.4 * angle
                 smooth_angle = state.angle_ema
+                if self.calibrating:
+                    state.ext_ref = max(state.ext_ref, smooth_angle)
                 tip = fingertip(landmarks, finger)
                 value = self._press_value(state, smooth_angle, tip, palm)
+                enter, release = self._thresholds(state)
                 pressed = state.pressed
-                if not pressed and value <= self.press_enter:
+                if not pressed and value <= enter:
                     pressed = True
-                elif pressed and value >= self.press_release:
+                elif pressed and value >= release:
                     pressed = False
 
                 changed = pressed != state.pressed
+                velocity = 0.0
                 if changed and (now - state.last_change) >= self.debounce:
                     velocity = self._estimate_velocity(state, smooth_angle, now)
                     triggers.append(

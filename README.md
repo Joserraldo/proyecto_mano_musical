@@ -92,10 +92,19 @@ mano-musical --mode game
 | `T` | Cambiar timbre |
 | `M` | Silenciar / activar audio |
 | `O` | Transponer una octava |
-| `C` | Reiniciar calibración del detector |
+| `C` | Calibrar (abre bien la mano ~4 s) |
+| `X` | Invertir izquierda/derecha en vivo |
+| `V` | Activar/desactivar espejo |
+| `B` | Rotar la imagen 180° |
+| `,` / `.` | Bajar / subir la sensibilidad del detector |
 | `[` / `]` | Cambiar modo de detección (`curl` / `drop`) |
 | `F10` o `/` | Ayuda en pantalla |
 | `ESC` | Salir |
+
+> **Orientación:** si tu mano derecha toca las notas graves (inicio), pulsa `X`.
+> Si toda la imagen se ve espejada o al revés, prueba `V` y/o `B`. Cuando
+> encuentres la combinación correcta, fíjala al arrancar con `--swap-hands`,
+> `--no-mirror` y/o `--rotate180`.
 
 ### Opciones de línea de comandos
 
@@ -107,7 +116,9 @@ mano-musical --mode game
 | `--detection curl\|drop` | Cómo se detecta el "dedo bajado" | `curl` |
 | `--no-camera` | Modo teclado, sin cámara | off |
 | `--no-mirror` | No espejar la imagen | off |
-| `--swap-hands` | Invertir izquierda/derecha | off |
+| `--rotate180` | Rotar la imagen 180° | off |
+| `--swap-hands` | Invertir izquierda/derecha | **on** |
+| `--no-swap-hands` | Desactivar la inversión de manos | off |
 | `--mute` | Arrancar en silencio | off |
 | `--width` / `--height` | Tamaño de ventana | 1280×720 |
 | `--debug` | Log verboso | off |

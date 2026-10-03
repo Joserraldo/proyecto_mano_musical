@@ -157,6 +157,68 @@ varios frames, que es lo que pasa en la vida real a 30 fps.
 
 ---
 
+## 2026-10-02 · Sesión 2 — Pruebas con hardware real
+
+### Objetivo
+Ejecutar la app con cámara y audio reales y pulir la experiencia de uso.
+
+### Obstáculos encontrados (solo aparecían con hardware)
+1. **`pygame.draw.line` rechazaba numpy.float32.** `to_screen` devolvía
+   `numpy.float32` (por los landmarks) y pygame 2.6 solo acepta float nativo:
+   `TypeError: invalid start_pos argument`. **Fix:** castear con `float()`.
+2. **El dispositivo de audio abre en 8 canales (7.1).** `pygame.mixer` permite
+   cambiar el número de canales por defecto, así que `make_sound` exigía muestras
+   de 8 canales: `ValueError: Array depth must match number of mixer channels`.
+   **Fix:** `AudioEngine._to_mixer` lee `pygame.mixer.get_init()[2]` y replica el
+   mono a los canales reales (soporta 1, 2 u 8).
+3. **`UnboundLocalError: velocity`** en el detector: si un cambio de dedo caía
+   dentro de la ventana de *debounce*, no se asignaba `velocity` pero sí se leía.
+   Con tracking real (parpadeo constante) esto pasaba siempre. **Fix:** inicializar
+   `velocity = 0.0` antes del bloque. Se agregó test de regresión.
+
+### Feedback del usuario
+- La mano derecha aparecía como notas graves → lateralidad invertida.
+- Costaba hacer que el sistema "entendiera" qué dedo quería tocar.
+
+### Causa raíz de la lateralidad
+Alimentábamos a MediaPipe el frame **espejado** y además aplicábamos el swap en
+**dos lugares** (tracker y detector), cancelándose. **Fix:** el swap se aplica
+solo en `HandTracker.swap_handedness`; el detector arranca con `swap_hands=False`.
+
+### Mejoras de usabilidad agregadas
+- **Controles en vivo** (sin reiniciar):
+  - `X` invierte izquierda/derecha (`HandTracker.swap_handedness`).
+  - `V` espejo on/off (`CameraThread.mirror`, se lee por frame).
+  - `B` rotación 180° (`CameraThread.rotate180`) para cámaras montadas al revés.
+  - `,` / `.` sensibilidad del detector (sube/baja el umbral de disparo).
+- **Calibración guiada** (`C`): durante `CALIBRATION_SECONDS` se mide el ángulo
+  "extendido" real por dedo (`ext_ref`) y los umbrales se derivan de ahí
+  (`enter = ext_ref − 55`, `release = ext_ref − 25`). Adapta el instrumento a
+  manos y cámaras distintas sin tocar constantes.
+- **HUD de orientación**: muestra `det`, `sens`, `espejo`, `rot` y `manos
+  INV/NOR`, más el progreso de calibración.
+- Flags persistentes: `--swap-hands`, `--no-mirror`, `--rotate180`.
+
+### Verificación
+```
+python -m pytest -q    -> 36 passed
+python -m mano_musical --mode free   -> arranca, mixer (44100,-16,8), tracker OK,
+                                          sin tracebacks con cámara real
+```
+
+### Confirmación con el usuario
+Con la combinación **X (invertir manos) sola** la orientación quedó correcta:
+su mano derecha pasó a tocar las notas agudas. Por eso el valor por defecto es
+`DEFAULT_SWAP_HANDS = True` (`HandTracker` invierte la lateralidad), con escape
+`--no-swap-hands` y la tecla `X` para alternar en vivo.
+
+### Pendientes
+- Auto-calibración al inicio si no hay `ext_ref` calibrado.
+- Persistir preferencias (orientación, sensibilidad, timbre) en un `settings.json`.
+- Detectar automáticamente un cierre de puño/gesto para "sustain".
+
+---
+
 ## Plantilla para nuevas entradas
 
 ```
