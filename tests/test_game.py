@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from mano_musical import config, music
-from mano_musical.game import JingleBellsGame, SongPlayer
+from mano_musical.game import JingleBellsGame, RhythmGame, SongPlayer
 
 
 def test_game_builds_targets_without_rests():
@@ -87,3 +87,22 @@ def test_song_player_orders_notes_by_time():
     second = player.update(0.6)
     assert first and second
     assert first[0][0] == "E4"
+
+
+def test_all_songs_stay_in_visual_scale():
+    for build in music.SONGS:
+        song = build()
+        assert set(song.used_notes()) <= set(config.VISUAL_KEYS)
+
+
+def test_scale_tempo_doubles_note_speed():
+    fast = music.scale_tempo(music.jingle_bells(), 2.0)
+    game = RhythmGame(fast)
+    assert game.targets[1].time == pytest.approx(0.25)
+
+
+def test_game_finishes_when_everything_judged():
+    game = RhythmGame(music.campana())
+    game.start(now=0.0)
+    game.update(game.start_time + game.song.total_seconds() + config.HIT_WINDOW_OK + 0.1)
+    assert game.finished

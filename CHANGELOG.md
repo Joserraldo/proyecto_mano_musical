@@ -7,6 +7,12 @@ Todos los cambios notables de este proyecto se documentan acá. El formato sigue
 ## [Unreleased]
 
 ### Added
+- Modo juego estilo piano tiles: carril por tecla y ladrillos con largo = duración de la nota.
+- 4 canciones seleccionables con `1`-`4` (Jingle Bells, Estrellita, Campana sobre
+  Campana, Cumpleaños Feliz), cada una con tempo base propio.
+- 4 velocidades con `-`/`=` (multiplicador de BPM): lenta / normal / rápida / experta.
+- Resumen al terminar la canción: score, precisión, combo máximo y conteo de juicios.
+- `F12` guarda captura de pantalla en `docs/img/`; README con capturas reales.
 - Controles en vivo: `X` invertir manos, `V` espejo, `B` rotar 180°, `,`/`.`
   sensibilidad, `C` calibración guiada.
 - Calibración por dedo: mide el ángulo extendido real y deriva los umbrales
@@ -15,6 +21,8 @@ Todos los cambios notables de este proyecto se documentan acá. El formato sigue
 - Flags `--rotate180` y `--no-swap-hands`.
 
 ### Fixed
+- `--mode game` al arrancar no tiraba notas hasta pulsar SPACE (el conteo ahora
+  inicia de inmediato).
 - Crash al dibujar el esqueleto con numpy.float32 (`invalid start_pos argument`).
 - Crash de audio cuando el dispositivo abre en 8 canales (muestra adaptada al
   número real de canales del mixer).

@@ -29,13 +29,10 @@ class Target:
     time: float
     note: str
     beats: float
+    seconds: float = 0.0
     hit: bool = False
     judged: bool = False
     judgement: str = ""
-
-    @property
-    def duration(self) -> float:
-        return self.beats
 
 
 @dataclass
@@ -59,8 +56,8 @@ class GameState:
     counts: dict = field(default_factory=lambda: {k: 0 for k in JUDGEMENTS})
 
 
-class JingleBellsGame:
-    """Juego de ritmo sobre Jingle Bells (o cualquier ``Song``)."""
+class RhythmGame:
+    """Juego de ritmo estilo piano tiles sobre cualquier ``Song``."""
 
     def __init__(self, song: Optional[music.Song] = None) -> None:
         self.song = song or music.jingle_bells()
@@ -71,9 +68,11 @@ class JingleBellsGame:
 
     def build(self) -> None:
         self._targets = []
-        for start, _dur, note in self.song.timeline():
+        for start, dur, note in self.song.timeline():
             if note:
-                self._targets.append(Target(time=start, note=note, beats=_dur / self.song.beat_duration))
+                self._targets.append(
+                    Target(time=start, note=note, beats=dur / self.song.beat_duration, seconds=dur)
+                )
         self._targets.sort(key=lambda t: t.time)
 
     @property
@@ -167,7 +166,7 @@ class JingleBellsGame:
         )
         return 100.0 * weighted / total
 
-    def upcoming(self, now: float, horizon: float = 3.0) -> list[tuple[Target, float]]:
+    def upcoming(self, now: float, horizon: float = config.GAME_FALL_HORIZON) -> list[tuple[Target, float]]:
         """Objetivos visibles para el render: ``(target, delta_s)``."""
         if self.start_time is None:
             return []
@@ -223,3 +222,7 @@ class SongPlayer:
                 due.append((note, dur))
             self._index += 1
         return due
+
+
+# Alias histórico: el juego funciona con cualquier canción, no solo Jingle Bells.
+JingleBellsGame = RhythmGame

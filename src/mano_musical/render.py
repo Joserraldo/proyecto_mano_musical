@@ -305,23 +305,36 @@ class Renderer:
             self._blit_text(key_char.upper(), self.font_md, text_color, rect.centerx, rect.bottom - 34, center=True)
         self._blit_text("Do Re Mi ... escala", self.font_sm, config.COLOR_TEXT_DIM, 12, band_top - 22)
 
-    def draw_falling_notes(self, upcoming: list, horizon: float = 3.0) -> None:
+    def draw_falling_notes(self, upcoming: list, horizon: float = config.GAME_FALL_HORIZON) -> None:
+        """Notas estilo piano tiles: carriles verticales + ladrillos que caen a la línea."""
         stage = self._stage_rect()
+        hit_y = self.height - self.KEY_BAND_HEIGHT - 8
+        travel = max(1, hit_y - stage.y)
+        pps = travel / horizon
+        for note in config.VISUAL_KEYS:
+            r = self.key_rect(note)
+            lane = pygame.Surface((r.width, travel), pygame.SRCALPHA)
+            lane.fill((*config.NOTE_COLORS.get(note, config.COLOR_ACCENT), 14))
+            self.screen.blit(lane, (r.x, stage.y))
         for target, delta in upcoming:
-            ratio = clamp((horizon - delta) / horizon, 0.0, 1.0)
-            y = int(stage.y + ratio * (stage.height - 10))
-            rect = self.key_rect(target.note)
+            r = self.key_rect(target.note)
+            bottom = hit_y - delta * pps
+            if bottom < stage.y:
+                continue
+            top = max(stage.y, bottom - max(26.0, target.seconds * pps * 0.9))
+            tile = pygame.Rect(r.x + 7, int(top), r.width - 14, max(18, int(bottom - top)))
             color = config.NOTE_COLORS.get(target.note, config.COLOR_ACCENT)
-            pill = pygame.Rect(rect.x + 10, y - 16, rect.width - 20, 32)
-            pygame.draw.rect(self.screen, color, pill, border_radius=16)
-            pygame.draw.rect(self.screen, (255, 255, 255), pill, 2, border_radius=16)
-            self._blit_text(target.note, self.font_sm, (0, 0, 0), pill.centerx, pill.centery, center=True)
-        hit_line = pygame.Rect(stage.x, self.height - self.KEY_BAND_HEIGHT - 6, stage.width, 6)
-        pygame.draw.rect(self.screen, config.COLOR_ACCENT, hit_line, border_radius=3)
+            fill = pygame.Surface((tile.width, tile.height), pygame.SRCALPHA)
+            fill.fill((*color, 235))
+            self.screen.blit(fill, tile.topleft)
+            pygame.draw.rect(self.screen, (255, 255, 255), tile, 2, border_radius=8)
+            if tile.height >= 22:
+                self._blit_text(target.note, self.font_sm, (10, 10, 20), tile.centerx, tile.centery, center=True)
+        pygame.draw.rect(self.screen, config.COLOR_ACCENT, pygame.Rect(stage.x, hit_y, stage.width, 5), border_radius=2)
 
     def draw_hud(self, hud: HudData) -> None:
         self._blit_text("MANO MUSICAL", self.font_md, config.COLOR_ACCENT, 16, 12)
-        mode_label = {"free": "LIBRE", "game": "JUEGO: JINGLE BELLS", "demo": "DEMO AUTOMÁTICA", "replay": "REPLAY"}.get(
+        mode_label = {"free": "LIBRE", "game": "MODO JUEGO", "demo": "DEMO AUTOMÁTICA", "replay": "REPLAY"}.get(
             hud.mode, hud.mode.upper()
         )
         self._blit_text(mode_label, self.font_md, config.COLOR_TEXT, 230, 12)
@@ -368,6 +381,8 @@ class Renderer:
     def _draw_game_hud(self, game: dict) -> None:
         x = self.width // 2 - 120
         self._blit_text(f"SCORE {game.get('score', 0):>6}", self.font_md, config.COLOR_TEXT, x, 10)
+        song_line = f"{game.get('song', '')} · velocidad {game.get('diff', '')}"
+        self._blit_text(song_line, self.font_sm, config.COLOR_ACCENT_2, x + 200, 14)
         self._blit_text(f"COMBO x{game.get('combo', 0)}", self.font_sm, config.COLOR_ACCENT, x, 40)
         self._blit_text(f"ACC {game.get('accuracy', 0):5.1f}%", self.font_sm, config.COLOR_TEXT_DIM, x + 200, 40)
         judgement = game.get("last_judgement", "")
@@ -385,9 +400,10 @@ class Renderer:
             ("Izq: meñique C4 · anular D4 · medio E4 · índice F4 · pulgar G4", config.COLOR_TEXT_DIM, self.font_sm),
             ("Der: pulgar A4 · índice B4 · medio C5 · anular D5 · meñique E5", config.COLOR_TEXT_DIM, self.font_sm),
             ("", config.COLOR_TEXT, self.font_sm),
-            ("F1 modo libre   F2 juego Jingle Bells   F3 demo   F4 replay", config.COLOR_TEXT, self.font_sm),
+            ("F1 modo libre   F2 juego   F3 demo   F4 replay", config.COLOR_TEXT, self.font_sm),
+            ("En el juego: 1-4 canción (Jingle/Estrellita/Campana/Cumpleaños)   -/= velocidad   SPACE reinicia", config.COLOR_TEXT, self.font_sm),
             ("C calibrar (abre la mano 4s)   X invertir manos   V espejo   B rotar 180°", config.COLOR_WARN, self.font_sm),
-            ("R grabar/reproducir   T timbre   M mutear   O octava   , . sensibilidad", config.COLOR_TEXT, self.font_sm),
+            ("R grabar/reproducir   T timbre   M mutear   O octava   , . sensibilidad   F12 captura", config.COLOR_TEXT, self.font_sm),
             ("[ / ] cambiar modo de detección (curl/drop)   F10/ayuda   ESC salir", config.COLOR_TEXT, self.font_sm),
             ("", config.COLOR_TEXT, self.font_sm),
             ("Jingle Bells se toca así:  E E E · E E E · E G C D E · ...", config.COLOR_WARN, self.font_md),

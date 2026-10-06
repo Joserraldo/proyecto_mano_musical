@@ -144,6 +144,9 @@ SCORE_PERFECT = 100
 SCORE_GOOD = 70
 SCORE_OK = 40
 SCORE_MISS = 0
+GAME_FALL_HORIZON = 4.0  # segundos que tarda una nota en caer hasta la línea
+# Velocidad = multiplicador del BPM de la canción.
+DIFFICULTIES = [("lenta", 0.7), ("normal", 1.0), ("rápida", 1.35), ("experta", 1.7)]
 
 # --------------------------------------------------------------------------
 # Paleta visual

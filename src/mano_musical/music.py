@@ -8,7 +8,7 @@ testeable sin dispositivo de audio.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -211,6 +211,56 @@ JINGLE_BELLS_EVENTS: list[tuple[str | None, float]] = [
 def jingle_bells() -> Song:
     """Canción Jingle Bells embebida (sin dependencias externas)."""
     return Song("Jingle Bells", bpm=config.TEMPO_BPM, events=_events(JINGLE_BELLS_EVENTS))
+
+
+# Estrellita (Twinkle Twinkle) en Do mayor: rango C4-A4, tempo lento. Ideal fácil.
+ESTRELLITA_EVENTS: list[tuple[str | None, float]] = [
+    ("C4", 1), ("C4", 1), ("G4", 1), ("G4", 1), ("A4", 1), ("A4", 1), ("G4", 2),
+    ("F4", 1), ("F4", 1), ("E4", 1), ("E4", 1), ("D4", 1), ("D4", 1), ("C4", 2),
+    ("G4", 1), ("G4", 1), ("F4", 1), ("F4", 1), ("E4", 1), ("E4", 1), ("D4", 2),
+    ("G4", 1), ("G4", 1), ("F4", 1), ("F4", 1), ("E4", 1), ("E4", 1), ("D4", 2),
+    ("C4", 1), ("C4", 1), ("G4", 1), ("G4", 1), ("A4", 1), ("A4", 1), ("G4", 2),
+    ("F4", 1), ("F4", 1), ("E4", 1), ("E4", 1), ("D4", 1), ("D4", 1), ("C4", 2),
+]
+
+
+def estrellita() -> Song:
+    return Song("Estrellita", bpm=78, events=_events(ESTRELLITA_EVENTS))
+
+
+# Campana sobre campana: solo C4 D4 E4 G4, muy fácil y lenta.
+CAMPANA_EVENTS: list[tuple[str | None, float]] = [
+    ("E4", 1), ("C4", 1), ("C4", 1), ("D4", 1), ("E4", 1), ("E4", 1), ("E4", 2),
+    ("D4", 1), ("D4", 1), ("D4", 2), ("E4", 1), ("G4", 1), ("G4", 2),
+    ("E4", 1), ("C4", 1), ("C4", 1), ("D4", 1), ("E4", 1), ("E4", 1), ("E4", 1), ("E4", 1),
+    ("D4", 1), ("D4", 1), ("E4", 1), ("C4", 1), ("G4", 1), ("G4", 1), ("C4", 2),
+]
+
+
+def campana() -> Song:
+    return Song("Campana sobre Campana", bpm=84, events=_events(CAMPANA_EVENTS))
+
+
+# Cumpleaños Feliz en Do mayor. Se repite una vez para que dure un poco más.
+CUMPLEANOS_PHRASE: list[tuple[str | None, float]] = [
+    ("G4", 0.5), ("G4", 0.5), ("A4", 1), ("G4", 1), ("C5", 1.5), ("B4", 0.5),
+    ("G4", 0.5), ("G4", 0.5), ("A4", 1), ("G4", 1), ("D5", 1.5), ("C5", 0.5),
+    ("G4", 0.5), ("G4", 0.5), ("E5", 1), ("C5", 1), ("B4", 1), ("A4", 1),
+    ("F4", 0.5), ("F4", 0.5), ("E4", 1), ("D4", 1), ("C4", 2),
+]
+
+
+def cumpleanos() -> Song:
+    return Song("Cumpleaños Feliz", bpm=92, events=_events(CUMPLEANOS_PHRASE * 2))
+
+
+def scale_tempo(song: Song, factor: float) -> Song:
+    """Copia de la canción con el BPM multiplicado (más rápido = más difícil)."""
+    return replace(song, bpm=max(40, int(round(song.bpm * factor))))
+
+
+# Orden = teclas 1..4 del modo juego.
+SONGS = (jingle_bells, estrellita, campana, cumpleanos)
 
 
 def load_song(path: str | Path) -> Song:

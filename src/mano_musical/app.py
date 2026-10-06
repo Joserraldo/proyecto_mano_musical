@@ -18,7 +18,7 @@ import numpy as np
 from . import config, music
 from .audio_engine import AudioEngine
 from .capture import CameraThread, InferenceThread
-from .game import JingleBellsGame, SongPlayer
+from .game import RhythmGame, SongPlayer
 from .gesture import FingerPressDetector
 from .hand_tracker import HandTracker
 from .recorder import Performance, PerformancePlayer, PerformanceRecorder, save_performance
@@ -81,11 +81,14 @@ class ManoMusicalApp:
             InferenceThread(self.state, self.tracker, self.detector) if self.tracker.available else None
         )
 
-        self.game = JingleBellsGame(music.jingle_bells())
-        self.autoplay = SongPlayer(music.jingle_bells(), loop=True)
+        self.song_index = 0
+        self.diff_index = 1
+        self.game = RhythmGame(self._current_song())
+        self.autoplay = SongPlayer(self._current_song(), loop=True)
         self.recorder = PerformanceRecorder()
         self.replayer: Optional[PerformancePlayer] = None
         self.last_performance: Optional[Performance] = None
+        self._game_reported = False
 
         self.voices: dict[str, tuple[str, float]] = {}
         self.active_notes: dict[str, int] = {}
@@ -94,7 +97,7 @@ class ManoMusicalApp:
         self.timbre_index = TIMBRES.index(args.timbre) if args.timbre in TIMBRES else 0
         self.ui = UiState(mode=args.mode)
         self.running = True
-        self._apply_mode(args.mode, start=False)
+        self._apply_mode(args.mode)
 
     # -------------------------------------------------------------- lifecycle
     def run(self) -> int:
@@ -208,6 +211,14 @@ class ManoMusicalApp:
             self._show_banner(f"Detección: {self.detector.mode}")
         elif key == pygame.K_SPACE and self.ui.mode == "game":
             self._apply_mode("game", time.perf_counter())
+        elif pygame.K_1 <= key <= pygame.K_1 + len(music.SONGS) - 1:
+            self._select_song(key - pygame.K_1, now)
+        elif key == pygame.K_MINUS:
+            self._cycle_diff(-1, now)
+        elif key == pygame.K_EQUALS:
+            self._cycle_diff(1, now)
+        elif key == pygame.K_F12:
+            self._save_screenshot()
 
         name = pygame.key.name(key)
         note = config.KEYBOARD_MAP.get(name)
@@ -264,7 +275,32 @@ class ManoMusicalApp:
                 self._trigger_off(trigger.note, voice)
 
     # ------------------------------------------------------------------ modes
-    def _apply_mode(self, mode: str, now: Optional[float] = None, start: bool = True) -> None:
+    def _current_song(self) -> music.Song:
+        base = music.SONGS[self.song_index]()
+        return music.scale_tempo(base, config.DIFFICULTIES[self.diff_index][1])
+
+    def _rebuild_songs(self) -> None:
+        song = self._current_song()
+        self.game = RhythmGame(song)
+        self.autoplay = SongPlayer(song, loop=True)
+
+    def _select_song(self, index: int, now: float) -> None:
+        self.song_index = index
+        self._restart_songs(now)
+
+    def _cycle_diff(self, step: int, now: float) -> None:
+        self.diff_index = (self.diff_index + step) % len(config.DIFFICULTIES)
+        self._restart_songs(now)
+
+    def _restart_songs(self, now: float) -> None:
+        self._rebuild_songs()
+        if self.ui.mode in ("game", "demo"):
+            self._apply_mode(self.ui.mode, now)
+        self._show_banner(
+            f"{self.game.song.name} · velocidad {config.DIFFICULTIES[self.diff_index][0]} (F2 para jugar)"
+        )
+
+    def _apply_mode(self, mode: str, now: Optional[float] = None) -> None:
         now = now or time.perf_counter()
         self.ui.mode = mode
         self.autoplay.stop()
@@ -272,14 +308,14 @@ class ManoMusicalApp:
             self.replayer.stop()
         self._release_all()
         if mode == "game":
+            self._game_reported = False
             self.game.reset()
-            if start:
-                self.game.start(now)
-            self._show_banner("Modo JUEGO: toca las notas que caen (SPACE reinicia)")
+            self.game.start(now)
+            self._show_banner("Modo JUEGO: baja el dedo (o tecla) cuando el ladrillo toque la línea. SPACE reinicia")
         elif mode == "demo":
             self.game.reset()
             self.autoplay.start(now)
-            self._show_banner("Demo: Jingle Bells automática")
+            self._show_banner(f"Demo: {self.game.song.name} automática")
         elif mode == "replay":
             if self.last_performance:
                 self.replayer = PerformancePlayer(self.last_performance, loop=True)
@@ -341,12 +377,23 @@ class ManoMusicalApp:
             if result.judgement == "miss":
                 self.ui.last_judgement = "miss"
                 self.ui.judgement_timer = 0.6
+        if self.game.finished and not self._game_reported:
+            self._game_reported = True
+            st = self.game.state
+            self._show_banner(
+                f"¡Fin! {self.game.song.name} · Score {st.score} · Precisión {self.game.accuracy():.0f}% "
+                f"· Combo máx {st.max_combo} · Perfect {st.counts['perfect']} Good {st.counts['good']} "
+                f"OK {st.counts['ok']} Miss {st.counts['miss']} (SPACE reinicia)",
+                12.0,
+            )
         self.ui.game = {
             "score": self.game.state.score,
             "combo": self.game.state.combo,
             "accuracy": self.game.accuracy(),
             "last_judgement": self.ui.last_judgement,
             "judgement_timer": self.ui.judgement_timer,
+            "song": self.game.song.name,
+            "diff": config.DIFFICULTIES[self.diff_index][0],
         }
 
     # ------------------------------------------------------------------ render
@@ -357,7 +404,8 @@ class ManoMusicalApp:
         self.renderer.draw_camera(frame)
         self.renderer.draw_hands(hand_frame, self.detector.last_readings)
         if self.ui.mode == "game":
-            self.renderer.draw_falling_notes(self.game.upcoming(now))
+            horizon = config.GAME_FALL_HORIZON
+            self.renderer.draw_falling_notes(self.game.upcoming(now, horizon), horizon)
         self.renderer.draw_keys(list(self.active_notes.keys()))
         hud = HudData(
             mode=self.ui.mode,
@@ -388,6 +436,14 @@ class ManoMusicalApp:
         self.renderer.present(dt)
 
     # ---------------------------------------------------------------- helpers
+    def _save_screenshot(self) -> None:
+        out = config.PROJECT_ROOT / "docs" / "img"
+        out.mkdir(parents=True, exist_ok=True)
+        path = out / f"captura_{time.strftime('%Y%m%d_%H%M%S')}.png"
+        pygame.image.save(self.renderer.screen, str(path))
+        self._show_banner(f"Captura: {path.relative_to(config.PROJECT_ROOT)}")
+        log.info("Captura -> %s", path)
+
     def _show_banner(self, text: str, seconds: float = 2.5) -> None:
         self.ui.banner = text
         self.ui.banner_timer = seconds
